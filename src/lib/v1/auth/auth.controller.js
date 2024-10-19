@@ -38,15 +38,20 @@ const login = catchAsync(async (req, res) => {
   const { email, password, role } = req.body;
 
   const user = await authService.loginUserWithEmailAndPassword(email, password, role);
-  if (user.status != 'ACTIVE') {
-    responseHandler(res, null, 'User is restricted', httpStatus.FORBIDDEN);
+  if (!user) {
+    responseHandler(res,'Forbidden', httpStatus.FORBIDDEN);
   }
+
+  if (user.status != 'ACTIVE') {
+    responseHandler(res,  'User is restricted', httpStatus.FORBIDDEN);
+  }
+  
   const tokens = await tokenService.generateAuthTokens(user);
   responseHandler(res, { user, tokens }, 'User logged in successfully', httpStatus.OK);
 });
 
 const logout = catchAsync(async (req, res) => {
-  responseHandler(res, null, 'User logged out successfully', httpStatus.OK);
+  responseHandler(res, 'User logged out successfully', httpStatus.OK);
 });
 
 const checkToken = catchAsync(async (req, res) => {
@@ -54,10 +59,10 @@ const checkToken = catchAsync(async (req, res) => {
   const userId = req.user._id;
   const user = await User.findById(userId);
   if (user) {
-    responseHandler(res, null, 'Token is valid', httpStatus.OK);
+    responseHandler(res,  'Token is valid', httpStatus.OK);
   }
   else {
-    responseHandler(res, null, 'Token expired', httpStatus.FORBIDDEN);
+    responseHandler(res, 'Token expired', httpStatus.FORBIDDEN);
   }
 });
 
@@ -68,7 +73,7 @@ const forgotPassword = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
   if (user.status != 'ACTIVE') {
-    responseHandler(res, null, 'Forbidden', httpStatus.FORBIDDEN);
+    responseHandler(res,  'Forbidden', httpStatus.FORBIDDEN);
   }
   await userService.updateUserById(user._id, { verificationCode: code });
 
@@ -78,29 +83,37 @@ const forgotPassword = catchAsync(async (req, res) => {
     code: code
   });
 
-  responseHandler(res, null, 'Password reset email sent successfully', httpStatus.NO_CONTENT);
+  responseHandler(res,  'Password reset email sent successfully', httpStatus.NO_CONTENT);
 });
 
 const resetPassword = catchAsync(async (req, res) => {
   const user = await userService.getUserByEmail(req.body.email, req.body.role);
-  if (user.status != 'ACTIVE') {
-    responseHandler(res, null, 'Forbidden', httpStatus.FORBIDDEN);
+  if (!user) {
+    responseHandler(res,  'Forbidden', httpStatus.FORBIDDEN);
   }
+  if (user.status != 'ACTIVE') {
+    responseHandler(res,  'Forbidden', httpStatus.FORBIDDEN);
+  }
+ 
 
   await authService.resetPassword(req.body.email, req.body.password, req.body.role);
-  responseHandler(res, null, 'Password reset successfully', httpStatus.OK);
+  responseHandler(res,  'Password reset successfully', httpStatus.OK);
 });
 
 const verifyCode = catchAsync(async (req, res) => {
   const user = await userService.getUserByEmail(req.body.email, req.body.role);
-  if (user.status != 'ACTIVE') {
-    responseHandler(res, null, 'Forbidden', httpStatus.FORBIDDEN);
+  if (!user) {
+    responseHandler(res,  'Forbidden', httpStatus.FORBIDDEN);
   }
+  if (user.status != 'ACTIVE') {
+    responseHandler(res,  'Forbidden', httpStatus.FORBIDDEN);
+  }
+  
   if (user.verificationCode !== req.body.code) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect code');
   }
 
-  responseHandler(res, null, 'Code verified successfully', httpStatus.OK);
+  responseHandler(res,  'Code verified successfully', httpStatus.OK);
 });
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -126,7 +139,7 @@ const googleSignup = catchAsync(async (req, res) => {
 
     let user = await User.findOne({ email });
     if (user) {
-      return responseHandler(res, null, 'User already exists', httpStatus.NOT_ACCEPTABLE);
+      return responseHandler(res,  'User already exists', httpStatus.NOT_ACCEPTABLE);
     }
 
     user = new User({
@@ -166,11 +179,11 @@ const googleSignin = catchAsync(async (req, res) => {
 
     let user = await User.findOne({ email });
     if (!user) {
-      return responseHandler(res, null, 'User not found. Please sign up first.', httpStatus.NOT_FOUND);
+      return responseHandler(res,  'User not found. Please sign up first.', httpStatus.NOT_FOUND);
     }
 
     if (user.status !== 'ACTIVE') {
-      return responseHandler(res, null, 'User is restricted', httpStatus.FORBIDDEN);
+      return responseHandler(res, 'User is restricted', httpStatus.FORBIDDEN);
     }
 
     const tokens = await tokenService.generateAuthTokens(user);
